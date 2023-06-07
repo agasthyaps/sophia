@@ -1,0 +1,157 @@
+.editable {
+    border: none; /* Removes standard input outline */
+    border-bottom: 1px solid black; /* Adds underline */
+    background-color: transparent; /* Makes input transparent */
+    min-width: 100px;
+    /* width: 100px; /* Sets a minimum width */
+    color: inherit; /* Inherits color from surrounding text */
+    font-size: .75em; /* Inherits font size from surrounding text */
+    font-family: inherit; /* Inherits font family from surrounding text */
+}
+
+.editable::placeholder {
+    color: lightgrey; /* Makes placeholder text light grey */
+    text-align: center;
+}
+.center{
+  margin: auto;
+  width: 50%;
+  padding: 10px;
+}
+.vertical-center {
+  min-height: 100%;  /* Fallback for browsers do NOT support vh unit
+  /* min-height: 100vh; /* These two lines are counted as one :-)        */
+
+  display: flex;
+  align-items: center;
+}
+
+input{
+  text-align: center;
+}
+
+#madlibContainer {
+  height: 75vh;
+}
+.card {
+  transition: background-color 0.3s ease;
+}
+#workSpace {
+  padding-top: 50px;
+
+}
+.rotator {
+  width: 100px;
+  height: 100px;
+  margin: 20px;
+  background-color:teal;
+}
+.animation {
+  -webkit-animation: rotator 25s linear infinite;
+  -moz-animation: rotator 25s linear infinite;
+  -ms-animation: rotator 25s linear infinite;
+  -o-animation: rotator 25s linear infinite;
+  animation: rotator 25s linear infinite;
+}
+@-webkit-keyframes rotator {
+  0%   { -webkit-transform: rotateX(0deg)    rotateY(0deg);    }
+  100% { -webkit-transform: rotateX(1080deg) rotateY(360deg);  }
+}
+@-moz-keyframes rotator {
+  0%   { -moz-transform: rotateX(0deg)    rotateY(0deg);    }
+  100% { -moz-transform: rotateX(1080deg) rotateY(360deg);  }
+}
+@-ms-keyframes rotator {
+  0%   { -ms-transform: rotateX(0deg)    rotateY(0deg);    }
+  100% { -ms-transform: rotateX(1080deg) rotateY(360deg);  }
+}
+@-o-keyframes rotator {
+  0%   { -o-transform: rotateX(0deg)    rotateY(0deg);    }
+  100% { -o-transform: rotateX(1080deg) rotateY(360deg);  }
+}
+@keyframes rotator {
+  0%   { transform: rotateX(0deg)    rotateY(0deg);    }
+  100% { transform: rotateX(1080deg) rotateY(360deg);  }
+}
+#chatWindow {
+    width: 400px;
+    height: 500px;
+    overflow-y: auto;
+}
+
+#chatMessages div {
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+#chatMessages .sophia {
+    background-color: #f8f9fa; // Message from "Sophia"
+    text-align: left;
+}
+
+#chatMessages .you {
+    background-color: #e9ecef; // Message from "You"
+    text-align: right;
+}
+.flex-fill {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+#logo {
+  opacity: 1;
+  transition: opacity 0.5s;
+}
+
+#logo:hover {
+  opacity: 1;
+}
+
+#credit {
+  display: inline;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+#thoughts {
+  display: inline;
+  font-style: italic;
+  transition: all 2s ease;
+}
+#thoughtStream{
+  padding:10px;
+}
+
+.nav-link {
+  cursor: pointer;
+}
+#pdfChatWindow .card{
+  width:80vw;
+  height:80vh;
+}
+
+#pdfChatMessages .sophia {
+    background-color: #f8f9fa; // Message from "Sophia"
+    display: inline;
+    text-align: left;
+    padding: 10px;
+}
+
+#pdfChatMessages .you {
+    background-color: #e9ecef; // Message from "You"
+    text-align: right;
+    padding: 10px;
+}
+
+.pdf-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 100px;
+}
+
+
+/* .custom-control-label span {
+  transition: all 0.3s ease;
+} */

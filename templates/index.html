@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sophia</title>
+  <link rel="icon" href="data:text/plain;charset=utf-8;base64,8J+klg=="/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+  <link rel="stylesheet" type="text/css" href="static/styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
+  <script src="static/script.js"></script>
+  <script>
+  function Expand(obj){
+    $(obj).attr('size', $(obj).attr('placeholder').length);
+  }
+
+  </script>
+</head>
+<body>
+  <!-- splash page -->
+  <div id="splashPage" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; text-align: center; padding-top: 20%;">
+    <h1 style="font-size: 5em; display: none;">Sophia</h1>
+    <h2 style="font-size: 2em; display: none;">AI assisted lesson planning</h2>
+  </div>
+
+  <!-- logo -->
+  <div id="logo" style="position: fixed; top: 10px; left: 10px; z-index: 9999;">Sophia
+    <p id="credit">is a proof-of-concept made by <a href="https://github.com/agasthyaps">agasthya</a> to demonstrate ways that AI might help teachers <strong>plan more effectively</strong>, rather than just <em>produce more plans</em>.
+    </p>
+  </div>
+
+  <!-- model picker -->
+  <div id="modelPicker" style="position: fixed; bottom: 10px; right: 10px;">
+    <p style="display:inline;">currently powered by: </p>
+    <div class="btn-group" role="group" aria-label="Engine selection">
+      <input type="radio" class="btn-check" name="options" id="gpt-35" autocomplete="off" checked>
+      <label class="btn btn-outline-primary active" for="gpt-35" data-toggle="tooltip" data-placement="top" title="shorter, weirder results, faster processing">gpt-3.5-turbo</label>
+
+      <input type="radio" class="btn-check" name="options" id="gpt-4" autocomplete="off">
+      <label class="btn btn-outline-primary" for="gpt-4" data-toggle="tooltip" data-placement="top" title="better quality results, slow and might crash">gpt-4</label>
+    </div>
+
+
+  </div>
+
+
+  <!-- madlib -->
+  <div id='madlibContainer' class="container text-center d-flex align-items-center">
+    <form id="madlibForm" action="/submit" method="post">
+      <h1>
+        <p>
+          I want to create a(n)
+          <input id="adjective" name="adjective" class="madlib editable" type="text" value="" placeholder="[adjective]" onkeyup="Expand(this);">
+          <input id="length" name="length" class="madlib editable" type="text" value="" placeholder="[length]" onkeyup="Expand(this);">
+          lesson about
+          <input id="subject" name="subject" class="madlib editable" type="text" value="" placeholder="[subject]" onkeyup="Expand(this);">
+          for
+          <input id="num" name="num" class="madlib editable" type="text" value="" placeholder="[# students]" onkeyup="Expand(this);">
+          <input id="grade" name="grade" class="madlib editable" type="text" value="" placeholder="[grade]" onkeyup="Expand(this);">
+          graders.
+        </p>
+        It's important to include
+        <input id="stuff" name="stuff" class="madlib editable" type="text" value="" placeholder="[standards, themes, cultural lens, etc]" onkeyup="Expand(this);">
+        throughout the lesson.
+      </h1>
+      <div class="container text-center">
+        <input type="submit" class="btn btn-outline-success" value="let's plan together">
+      </div>
+    </form>
+  </div>
+
+  <!-- pdf upload -->
+  <form id="pdfForm" action="/submit_pdf" method="post" enctype="multipart/form-data" class="pdf-form">
+    <a id="upload_link" href="#">I want to do a deep dive on an existing lesson</a>
+
+    <input type="file" id="file_upload" name="pdf_file" style="display:none;" accept=".pdf">
+    <button type="button" class="btn btn-outline-success" id="chooseFile" style="display:none;">Choose file (PDF only)</button>
+
+    <input type="submit" class="btn btn-outline-success" value="Upload" style="display:none;">
+  </form>
+
+
+
+  <!-- start of workspace -->
+  <div id="workSpace" class="container d-flex flex-row flex-nowrap justify-content-center" style="display: none;">
+    <div class="flex-fill">
+      <!-- title and explanatory text -->
+      <div id="workSpaceText" style="display: none;">
+        <h1 id="introTitle" style="display: none;"></h1>
+        <p id="explanation" style="display: none;"></p>
+      </div>
+      <div class="col-lg-auto">
+        <!-- card container -->
+        <div id="optionCards" class="container d-flex justify-content-center"></div>
+
+        <!-- pdf chat container -->
+        <div id="pdfChatWindow" class="col-lg-auto" style="display:none;">
+          <!-- chat window -->
+          <div class="card" style="display:inherit;">
+            <div id="pdfChatMessages" class="card-body">
+              <!-- Messages will be appended here -->
+            </div>
+            <div id="pdfChatFooter" class="card-footer">
+              <textarea id="pdfChatInput" class="form-control" rows="3" placeholder="Type your message..."></textarea>
+              <button id="pdfSendButton" class="btn btn-primary round-2">Send</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+    <div class="flex-fill">
+      <div id="chatWindow" class="col-lg-auto" style="display:none;">
+        <!-- chat window -->
+        <div class="card" style="display:inherit;">
+          <div id="chatMessages" class="card-body">
+            <!-- Messages will be appended here -->
+          </div>
+          <div id="chatFooter" class="card-footer">
+            <textarea id="chatInput" class="form-control" rows="3" placeholder="Type your message..."></textarea>
+            <button id="sendButton" class="btn btn-primary round-2">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- final lesson plan -->
+    <div id="lessonPlanCard" class="card" style="display:none;">
+      <div class="card-header">
+        <ul class="nav nav-pills card-header-pills">
+          <li class="nav-item">
+            <p id="lessonNav" class="nav-link" >Lesson Plan</p>
+          </li>
+          <li class="nav-item">
+            <a id="materialsNav" class="nav-link">Materials</a>
+          </li>
+          <li class="nav-item">
+            <p id="whatIfNav" class="nav-link disabled">What If...</p>
+          </li>
+        </ul>
+      </div>
+      <div id="lessonPlan" class="card-body"></div>
+      <div id="lessonFooter" class="card-footer">
+        Here's your complete lesson! Copy and paste it somewhere to save it. click 'start over' at the top to start over. click 'materials' to generate materials for the lesson (even more beta than this, try switching to gpt-4 for this part).
+      </div>
+    </div>
+    <!-- loader and ecouragement -->
+    <div class="d-flex flex-column justify-content-center">
+      <div class="row">
+        <div id="encouragingMessage" style="display: none; text-align: center;"></div>
+      </div>
+      <div class="row">
+        <div id="loader" class="rotator animation" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div> <!-- Add the CSS directly here -->
+      </div>
+      <div class="row">
+        <div id="thoughtStream" style="display:none;"><strong>Thought Stream: </strong><p id="thoughts"></p></div>
+      </div>
+    </div>
+
+    <!-- closing div for workSpace -->
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
+</body>
+</html>
