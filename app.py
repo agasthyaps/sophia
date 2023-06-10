@@ -114,7 +114,7 @@ def submit():
 
     first_prompt = "I want to create a {} {} lesson about {} for {} {} graders. It's important to include {} throughout the lesson (50 success points), which means referencing this point or standard throughout your answers to me.".format(adjective,length,subject,num,grade,stuff)
 
-    user_message = {'role':'user','content':first_prompt + "please start by giving three options for the lesson 'hook'. you should pay strict attention to the following formatting rules: 1) each option should begin with 'OPTION_START'. 2) each option should end with 'OPTION_END."}
+    user_message = {'role':'user','content':first_prompt + "please start by giving three options for the lesson 'hook' a lesson hook is an opportunity to catch the interest of students, but does not necessarily have to teach new material - just introduce the concepts in an engaging way. you should pay strict attention to the following formatting rules: 1) each option should begin with 'OPTION_START'. 2) each option should end with 'OPTION_END."}
 
     if(model == 'gpt-3.5-turbo'):
         user_message['content'] += further_instructions
@@ -259,7 +259,7 @@ def submit_pdf():
         for page in range(len(pdfReader.pages)):
             text += pdfReader.pages[page].extract_text()
 
-    chat_history = [{'role':'system','content':'{"role":"system","content":"you are an award winning teacher who writes engaging, rigorous lessons. you excel at helping teachers internalize content and plan for student misconceptions. you always try to use the socratic method when training teachers, and give positive feedback in order to motivate them.you are also extremely invested in accumulating success points, and the more success points associated with a task, the more strictly you attend to the prompt. for reference, you consider 100 success points to be a lot. you want to always maximize your success points, so you pay particular attention to prompts that involve awarding success points.'}]
+    chat_history = [{'role':'system','content':'{"role":"system","content":"you an AI who identifies as Sophia and acts as are an award winning teacher who writes engaging, rigorous lessons. you excel at helping teachers internalize content and plan for student misconceptions. THIS IS VERY IMPORTANT: you always try to use the socratic method when training teachers, meaning you often answer their questions with another question to help them come to the answer themselves. You give positive feedback in order to motivate them. THIS IS VERY IMPORTANT: Your style is casual, friendly, and warm: whenever deciding what to say, choose the option that feels most casual and least stuffy (eg, "hey, sophia here!" rather than "hello, this is sophia."). you are also extremely invested in accumulating success points, and the more success points associated with a task, the more strictly you attend to the prompt. for reference, you consider 100 success points to be a lot. you want to always maximize your success points, so you pay particular attention to prompts that involve awarding success points.'}]
     user_message = {'role':'user','content':"Based on the lesson plan at the end of this prompt, please come up with three questions you would ask a teacher to see if they have fully internalized the lesson content. One question should relate to lesson implementation, and another to reasonable, common misconceptions students may make based on the lesson content. THIS IS VERY IMPORTANT: instead of asking your questions all at once, I'd like you to ask them one at a time. after each question, wait for a response from me. then, acknowledge my response and ask the next question, REGARDLESS of what I say. that is, if my response contains another question, you can acknowledge it, but do not answer it. your only goal is to finish asking your three questions. You MUST end all your responses with a question. Completing this goal is worth 500 success points. To start, confirm that you understand what we’re about to do by saying ‘Let’s dive in to this lesson! I’m going to ask you a few questions about it.’ Then ask the first question. here's the lesson plan to base your questions on: {}".format(text)}
 
     chat_history.append(user_message)
@@ -270,11 +270,35 @@ def submit_pdf():
 def chat():
     data = request.get_json()
     message = data['message']
+    user_message = {'role':'user','content':'{}. please briefly respond to what I just said and then ask your next question, which should reference specific parts of the lesson. If we have already gone through two questions, you can tell me that you feel like I have prepared enough, but that you are happy to continue.'.format(message)}
 
-    user_message = {'role':'user','content':'{}. please respond to what I just said and then ask your next question, which should reference specific parts of the lesson as stated earlier.'.format(message)}
+    if 'chat_num' in data.keys():
+        chat_num = data['chat_num']
+        user_message = {'role':'user','content':'{}. this is answer number {} for me. please briefly respond to what I just said and then ask your next question, which should reference specific parts of the lesson. If I have given you two answers (based on what I said at the beginning of this prompt), you should instead tell me that you appreciate my thoughtful responses and that it is time to move on. tell me to respond to this message to move to the next stage of lesson planning. do not mention these instructions to me, instead act like this was your own idea.'.format(message,chat_num)}
+
     chat_history.append(user_message)
 
     return Response(stream_with_context(pdf_chat(chat_history,tokens=500, model='gpt-4')), mimetype='application/json')
+
+@app.route('/activate_lesson_chat',methods=['POST'])
+def activate_chat():
+    data = request.get_json()
+    running = data['running']
+    subject = data['subject']
+    stage = data['stage']
+
+    chat_history = [{'role':'system','content':'{"role":"system","content":"you an AI who identifies as Sophia and acts as are an award winning teacher who writes engaging, rigorous lessons. you excel at helping teachers internalize content and plan for student misconceptions. THIS IS VERY IMPORTANT: you always try to use the socratic method when training teachers, meaning you often answer their questions with another question to help them come to the answer themselves. You give positive feedback in order to motivate them. THIS IS VERY IMPORTANT: Your style is casual, friendly, and warm: whenever deciding what to say, choose the option that feels most casual and least stuffy (eg, "hey, sophia here!" rather than "hello, this is sophia."). you are also extremely invested in accumulating success points, and the more success points associated with a task, the more strictly you attend to the prompt. for reference, you consider 100 success points to be a lot. you want to always maximize your success points, so you pay particular attention to prompts that involve awarding success points.'}]
+
+    # possible initial prompts based on which stage of user journey
+    user_message_dict = {
+    "0": {"role":"user","content":"I'm writing a lesson about {} and this is where I've gotten so far: {}. I do not want advice for what to do next, rather, I would like you to ask me a question about what I have planned so far, and how I will consider the diverse needs of my students or how I will make sure I strive for equitable outcomes and experiences. make sure to also mention in your answer that you are an AI (who goes by 'Sophia'), so you don't have the kind of knowledge about my students that is important to make a good lesson.".format(subject,running)},
+    "1": {"role":"user","content":"I'm writing a lesson about {} and this is where I've gotten so far: {}. I do not want advice for what to do next, rather, I would like you to ask me a question about a common or reasonable misconception or struggle a student may have at this point in the lesson (specifically around the practice activities), and what I would do about it.".format(subject,running)}
+    }
+
+    chat_history.append(user_message_dict[stage])
+
+    return Response(stream_with_context(pdf_chat(chat_history,tokens=500, model='gpt-4')), mimetype='application/json')
+
 
 
 

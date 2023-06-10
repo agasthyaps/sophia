@@ -13,6 +13,8 @@
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js"></script>
   <script src="static/script.js"></script>
+  <script src="https://mozilla.github.io/pdf.js/build/pdf.js"></script>
+
   <script>
   function Expand(obj){
     $(obj).attr('size', $(obj).attr('placeholder').length);
@@ -75,12 +77,12 @@
 
   <!-- pdf upload -->
   <form id="pdfForm" action="/submit_pdf" method="post" enctype="multipart/form-data" class="pdf-form">
-    <a id="upload_link" href="#">I want to do a deep dive on an existing lesson</a>
+    <a id="upload_link" data-toggle="tooltip" data-placement="top" title="upload a pdf of an existing lesson to dissect it" href="#">I want to do a deep dive on an existing lesson</a>
 
     <input type="file" id="file_upload" name="pdf_file" style="display:none;" accept=".pdf">
     <button type="button" class="btn btn-outline-success" id="chooseFile" style="display:none;">Choose file (PDF only)</button>
 
-    <input type="submit" class="btn btn-outline-success" value="Upload" style="display:none;">
+    <input id="uploadBtn" type="submit" class="btn btn-outline-success" value="Upload" style="display:none;">
   </form>
 
 
@@ -97,19 +99,25 @@
         <!-- card container -->
         <div id="optionCards" class="container d-flex justify-content-center"></div>
 
-        <!-- pdf chat container -->
-        <div id="pdfChatWindow" class="col-lg-auto" style="display:none;">
-          <!-- chat window -->
-          <div class="card" style="display:inherit;">
-            <div id="pdfChatMessages" class="card-body">
-              <!-- Messages will be appended here -->
+        <!-- New Container for PDF viewer and chat -->
+        <div class="d-flex flex-row justify-content-center">
+            <!-- pdf viewer -->
+            <canvas id='pdf-canvas' style="flex:1;"></canvas>
+            <!-- pdf chat container -->
+            <div id="pdfChatWindow" style="display:none; flex:1;">
+                <!-- chat window -->
+                <div class="card flex-column" style="display:inherit; height: auto; max-height: 60vh;">
+                    <div id="pdfChatMessages" class="card-body overflow-auto" style="flex-grow: 1;">
+                        <!-- Messages will be appended here -->
+                    </div>
+                    <div id="pdfChatFooter" class="card-footer">
+                        <textarea id="pdfChatInput" class="form-control" rows="3" placeholder="Type your message..."></textarea>
+                        <button id="pdfSendButton" class="btn btn-primary round-2">Send</button>
+                    </div>
+                </div>
             </div>
-            <div id="pdfChatFooter" class="card-footer">
-              <textarea id="pdfChatInput" class="form-control" rows="3" placeholder="Type your message..."></textarea>
-              <button id="pdfSendButton" class="btn btn-primary round-2">Send</button>
-            </div>
-          </div>
         </div>
+
 
       </div>
     </div>

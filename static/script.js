@@ -41,6 +41,7 @@ var whatif_exist = false;
 var static_materials = "";
 var static_whatif = "";
 var running_options = "";
+var subject = "";
 
 function createCard(index, text) {
   let col = $('<div class="col-sm-4"></div>'); // or col-md-4 or col-lg-4 based on your requirements
@@ -74,14 +75,14 @@ function Expand(obj){
   $(obj).attr('size', $(obj).attr('placeholder').length);
 }
 
-function handleChatResponse(response) {
+function handleChatResponse(response, elementID) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8');
   var sentence = "";
 
   // Create a new div for Sophia's message with an inner span for the text
   var messageDiv = $("<div class='sophia'><i style='color: Gray;'>Sophia: </i><span></span></div>");
-  $('#pdfChatMessages').append(messageDiv);
+  $(elementID).append(messageDiv); // use parameter here instead of #pdfChatMessages
 
   function streamData() {
     return reader.read().then(({done, value}) => {
@@ -108,6 +109,7 @@ function handleChatResponse(response) {
 
       // Append the sentence to the span within Sophia's message div
       messageDiv.find('span').append(sentence);
+      $(elementID).scrollTop($(elementID)[0].scrollHeight);
       sentence = "";
       return streamData();
     });
@@ -117,33 +119,27 @@ function handleChatResponse(response) {
 }
 
 
-function handleResponse(response, card=true, ephemeral=true) {
+
+function handleResponse(response, card=true) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8');
   var idx_counter = 0;
   var sentence = "";
   var response_catcher = [];
 
-  function streamData(ephemeral) {
-
+  function streamData() {
     return reader.read().then(({done, value}) => {
 
-      if(ephemeral){
-        $('#thoughts').fadeOut(3000, function(){
-          $('#thoughts').empty();
-        });
-      }
+      $('#thoughts').fadeOut(3000, function(){
+        $('#thoughts').empty();
+      });
 
       if (done) {
-        if(ephemeral){
-          console.log("done");
-          console.log(response_catcher)
-          const finalResponse = response_catcher[response_catcher.length - 1];
+        console.log("done");
+        console.log(response_catcher)
+        const finalResponse = response_catcher[response_catcher.length - 1];
 
-          return finalResponse;
-        } else {
-          return;
-        }
+        return finalResponse;
       }
 
       const chunks = decoder.decode(value, {stream: true}).split('\n');
@@ -166,33 +162,69 @@ function handleResponse(response, card=true, ephemeral=true) {
           }
         }
       });
-      // console.log(sentence);
-      if(ephemeral){
-        if(sentence.length >=60){
-          idx_counter++;
-          if(idx_counter % 2 > 0){
-            console.log("APPENDING BECAUSE COUNTER IS " + idx_counter)
-            sentence = '...' + sentence + '...'
-            const randomNumber = Math.floor(Math.random() * (120 - 20 + 1) + 20);
-            $('#thoughts').append(sentence);
-            $('#thoughts').show();
-            $('#thoughts').css('padding',randomNumber.toString()+'px')
-            sentence = "";
-          }
-          else{
-            sentence = "";
-          }
+
+      if(sentence.length >=60){
+        idx_counter++;
+        if(idx_counter % 2 > 0){
+          console.log("APPENDING BECAUSE COUNTER IS " + idx_counter)
+          sentence = '...' + sentence + '...'
+          const randomNumber = Math.floor(Math.random() * (120 - 20 + 1) + 20);
+          $('#thoughts').append(sentence);
+          $('#thoughts').show();
+          $('#thoughts').css('padding',randomNumber.toString()+'px')
+          sentence = "";
         }
-        // existing lesson chat, show streaming.
-      } else {
-        $('#pdfChatMessages').append(sentence);
-        sentence = "";
+        else{
+          sentence = "";
+        }
       }
-      return streamData(ephemeral);
+
+      return streamData();
     });
   }
-  return streamData(ephemeral);
+  return streamData();
 }
+
+function showPDF(pdf_url) {
+    // The workerSrc property shall be specified.
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://mozilla.github.io/pdf.js/build/pdf.worker.js';
+
+    // Asynchronous download PDF as an ArrayBuffer
+    var loadingTask = pdfjsLib.getDocument(pdf_url);
+    loadingTask.promise.then(function(pdf) {
+        console.log('PDF loaded');
+
+        // Fetch the first page
+        var pageNumber = 1;
+        pdf.getPage(pageNumber).then(function(page) {
+            console.log('Page loaded');
+
+            var scale = .85;
+            var viewport = page.getViewport({ scale: scale });
+
+            // Prepare canvas using PDF page dimensions
+            var canvas = document.getElementById('pdf-canvas');
+            var context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            // Render PDF page into canvas context
+            var renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            var renderTask = page.render(renderContext);
+            renderTask.promise.then(function() {
+                console.log('Page rendered');
+            });
+        });
+    }, function(reason) {
+        console.error(reason);
+    });
+}
+
+
 
 $(document).ready(function(){
   // enable tooltips
@@ -242,13 +274,20 @@ $(document).ready(function(){
   });
 
   // UPLOAD PDF SCRIPT
+  var pdf_mode = false;
   $("#upload_link").click(function(e) {
     e.preventDefault();
-    $('#madlibContainer').css("display", "none");
-    $('#madlibContainer').css("height", "10px");
-    $('#madlibContainer').hide();
-    $('#madlibContainer').children().hide();
-    $("#chooseFile").show();
+    if(pdf_mode){
+      location.reload();
+    } else {
+      $('#madlibContainer').css("display", "none");
+      $('#madlibContainer').css("height", "10px");
+      $('#madlibContainer').hide();
+      $('#madlibContainer').children().hide();
+      $("#chooseFile").show();
+      pdf_mode = true;
+    }
+
   });
 
   $("#chooseFile").click(function() {
@@ -268,25 +307,42 @@ $(document).ready(function(){
     e.preventDefault();
     $('#modelPicker').hide();
 
+    var file = $('#file_upload')[0].files[0];
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        // e.target.result contains the data as a URL representing the file's data as a base64 encoded string
+        showPDF(e.target.result);
+    };
+    reader.readAsDataURL(file);
+
     var formData = new FormData();
     formData.append('pdf_file', $('#file_upload')[0].files[0]);
+    //idk which of these three is actually doing it but for some reason
+    // I couldnt get #madlibcontainer to disappear
+    $('#madlibContainer').css("display", "none");
+    $('#madlibContainer').hide();
+    $('#madlibContainer').children().hide();
+    $('#workSpace').css('padding','20px');
+    $('#pdfForm').css('padding','15px');
+    $('#upload_link').empty();
+    $('#upload_link').append('start over');
+    $('#chooseFile').hide();
+    $('#uploadBtn').hide();
+    $('#pdfChatWindow').show();
+    $('#workSpaceText').show();
+    $('#introTitle').empty();
+    $('#introTitle').append(titles[5]);
+    $('#introTitle').show();
+    $('#explanation').empty();
+    $('#explanation').append(explanations[5]);
+    $('#explanation').show();
 
     fetch('/submit_pdf', {
       method: 'POST',
       body: formData
     }).then(async response => {
-      $('#madlibContainer').css("display", "none");
-      $('#madlibContainer').hide();
-      $('#madlibContainer').children().hide();
-      $('#pdfChatWindow').show();
-      $('#introTitle').empty();
-      $('#introTitle').append(titles[5]);
-      $('#introTitle').show();
-      $('#explanation').empty();
-      $('#explanation').append(explanations[5]);
-      $('#explanation').show();
       if (response.ok) {
-        handleChatResponse(response);
+        handleChatResponse(response,'#pdfChatMessages');
       } else {
         throw new Error("Error: " + response.statusText);
       }
@@ -310,7 +366,7 @@ $(document).ready(function(){
         body: JSON.stringify({message: userMessage})
       }).then(async response =>{
         if (response.ok) {
-          await handleChatResponse(response);
+          await handleChatResponse(response, '#pdfChatMessages');
           $("#pdfSendButton").prop("disabled", false);
         } else {
           throw new Error("Error: " + response.statusText);
@@ -325,6 +381,8 @@ $(document).ready(function(){
   // STREAMING VERSION
   $("#madlibForm").on("submit", function(e) {
     e.preventDefault();  // Prevent the form from causing a page refresh.
+    subject = $('#subject').val();
+    $('#pdfForm').hide();
     $("#madlibContainer").removeClass("d-flex align-items-center");
     $("#madlibContainer").animate({
       'margin-top': '40px',
@@ -478,57 +536,82 @@ $(document).ready(function(){
     $('#encouragingMessage').empty();
     $('#introTitle').empty();
     $('#explanation').empty();
-
-    $('#chatWindow').data('card-index',index);
-    $('#chatWindow').show();
-    $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia:</i> Good choice! Let’s dig into this section for a moment. I’m just an AI, so I don’t know anything about your students in real life. Think about your students - especially the students who may not ask for help, or a student with whom you’d like to strengthen your relationship. How would you modify the lesson so far to fit the needs of your students?</div>');
-  });
-
-  // CHAT BUTTON -> BACKEND
-  $('#chatFooter').on('click','#sendButton.round-2', function() {
-    console.log('round2 button clicked.')
-    var userResponse = $('#chatInput').val();
-    var cardIndex = $('#chatWindow').data('card-index');
-    $('#chatMessages').append('<div class="you"><i style="color: Gray;">You:</i> ' + userResponse + '</div>');
-    $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia:</i> Great thinking.</div>');
-    $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia:</i> I’ll make a note of that in the lesson plan.</div>');
-    //
-
-    $('#chatInput').val('');
-
-    $('#optionCards').fadeOut();
-    $('#optionCards').empty();
-    $('#chatWindow').fadeOut(1000);
-
-    $('#encouragingMessage').empty();
-    $('#encouragingMessage').append(encouragement[2]);
-    $('#encouragingMessage').fadeIn();
-    $('#loader').show();
-
-    //send to backend
-    fetch('/chat_response_edits',{
+    // "im just an ai so..."
+    fetch('/activate_lesson_chat',{
       method: 'POST',
       headers:{
-        'Content-Type': 'application/json'
+        'Content-Type':'application/json'
       },
-      body: JSON.stringify({userResponse: userResponse, cardIndex: cardIndex, model:current_model})
-    })
-    .then(async response => {
-      $('#optionCards').empty();
-      $('#thoughtStream').show();
-      let finalResponse = await handleResponse(response, false);
-      await fetch('/chat_response_probes',{
-        method: 'POST',
-        headers: {'Content-Type':'application/json'}
-      }).then(async response => { // make this callback async
-        let probes = await handleResponse(response, false)
+      body: JSON.stringify({running: running_options, subject:subject, stage:"0"})
+    }).then(async response => {
+      $('#chatWindow').show();
+      handleChatResponse(response,'#chatMessages');
+    });
 
+    $('#chatWindow').data('card-index',index);
+    // $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia:</i> Good choice! Let’s dig into this section for a moment. I’m just an AI, so I don’t know anything about your students in real life. Think about your students - especially the students who may not ask for help, or a student with whom you’d like to strengthen your relationship. How would you modify the lesson so far to fit the needs of your students?</div>');
+  });
+
+  // chat about the first two choices you've made, but only two exchanges.
+  var chat_num = 0;
+  $('#chatFooter').on('click','#sendButton.round-2', function() {
+
+    console.log('round2 button clicked.')
+    var userMessage = $('#chatInput').val();
+    // keep chatting if we've had less than two answers from users
+    if(chat_num < 2){
+      if (userMessage){
+        chat_num++;
+        $('#chatMessages').append("<div class='you'><i style='color: Gray;'>You: </i>" + userMessage + "</div>");
+        $('#chatInput').val(""); //clear input field after submitting response
+
+        $("#sendButton.round-2").prop("disabled", true);
+
+        fetch('/lesson_chat',{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({message: userMessage, chat_num:chat_num})
+        }).then(async response =>{
+          if (response.ok) {
+            await handleChatResponse(response, '#chatMessages');
+            $("#sendButton.round-2").prop("disabled", false);
+          } else {
+            throw new Error("Error: " + response.statusText);
+          }
+        });
+      }
+    } else {
+      // if we've chatted enough (2 exchanges), then move to next stage
+      var cardIndex = $('#chatWindow').data('card-index');
+      $('#chatInput').val('');
+
+      $('#optionCards').fadeOut();
+      $('#optionCards').empty();
+      $('#chatWindow').fadeOut(1000);
+
+      $('#encouragingMessage').empty();
+      $('#encouragingMessage').append(encouragement[2]);
+      $('#encouragingMessage').fadeIn();
+      $('#loader').show();
+
+      // create options for activities/practice
+      fetch('/chat_response_edits',{
+        method: 'POST',
+        headers:{
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({userResponse: userMessage, cardIndex: cardIndex, model:current_model})
+      })
+      .then(async response => {
+        $('#optionCards').empty();
+        $('#thoughtStream').show();
+        let finalResponse = await handleResponse(response, false);
         for (var i = 0; i < finalResponse.length; i++) {
           createCard(i,finalResponse[i]);
         }
-        for (var i = 0; i < probes.length; i++) {
-          $('.card[data-index=' + Math.floor(i/2) + ']').data('probe-' + (i%2), probes[i]);
-        }
+
         $('#loader').hide();
         $('#encouragingMessage').fadeOut();
         $('#workSpaceText').fadeIn();
@@ -542,12 +625,14 @@ $(document).ready(function(){
         $('#thoughtStream').hide();
 
         round++;
-      });
-    });
+        console.log("ACTIVITIES, ROUND 3:" + round);
 
+      });
+    }
   });
 
-  // PRACTICE CHOSEN -> CHAT MISCONCEPTIONS
+
+  // User chooses option for practice, which triggers chat to open again.
   $('#optionCards').on('click','.round-3', function(){
     var clickedCard = $(this);
     clickedCard.addClass('border-success mb-3');
@@ -562,34 +647,56 @@ $(document).ready(function(){
 
     $('#sendButton').removeClass("round-2");
     $('#sendButton').addClass("round-3");
-    $('#chatWindow').data('index',index);
-    $('#chatWindow').data('probe-0',$(this).data('probe-0'));
-    $('#chatWindow').data('probe-1',$(this).data('probe-1'));
-    $('#chatWindow').show();
-    $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia:</i> Good choice! Let’s do a deep dive. First, how would you answer this question?</div>');
-    $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia: </i>' + $('#chatWindow').data('probe-0') + '</div>');
-    //
+    $('#chatWindow').data('index',index); //important for sending info back to server
+    fetch('/activate_lesson_chat',{
+      method: 'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body: JSON.stringify({running: running_options, subject:subject, stage:"1"})
+    }).then(async response => {
+      $('#chatWindow').show();
+      //reset chat number counter so we can end chat after set number of interactions
+      chat_num = 0;
+      handleChatResponse(response,'#chatMessages');
+    });
+
   });
 
   $('#chatFooter').on('click','#sendButton.round-3',function(){
     console.log('round3 button clicked. and probe_num is '+probe_num);
-    var userResponse = $('#chatInput').val();
-    $('#chatMessages').append('<div class="you"><i style="color: Gray;">You:</i> ' + userResponse + '</div>');
-    $('#chatWindow').data('response-'+ probe_num, userResponse);
-    $('#chatInput').val('');
-    // $('#chatMessages').scrollTo(0,$('#chatMessages').scrollHeight);
-    probe_num++;
-    // If we're still asking questions (probe_num is less than 2)
-    if(probe_num < 2){
-      console.log('passed the if test and probe num is '+probe_num);
-      $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia:</i> Thanks for your answer to that! Now, how would you answer this second question?</div>');
-      $('#chatMessages').append('<div class="sophia"><i style="color: Gray;">Sophia: </i>' + $('#chatWindow').data('probe-'+probe_num) + '</div>');
+    var userMessage = $('#chatInput').val();
+    if(chat_num < 2){
+      if (userMessage){
+        $('#chatWindow').data('response-'+ chat_num, userMessage);
+        $('#chatMessages').append("<div class='you'><i style='color: Gray;'>You: </i>" + userMessage + "</div>");
+        $('#chatInput').val(""); //clear input field after submitting response
+        chat_num++;
 
-    } else if (probe_num == 2) { // If we're done asking questions but still need to get the last response
+        $("#sendButton.round-3").prop("disabled", true);
+
+        fetch('/lesson_chat',{
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({message: userMessage, chat_num:chat_num})
+        }).then(async response =>{
+          if (response.ok) {
+            await handleChatResponse(response, '#chatMessages');
+            $("#sendButton.round-3").prop("disabled", false);
+          } else {
+            throw new Error("Error: " + response.statusText);
+          }
+        });
+      }
+
+    }
+    // we've talked enough, now move to next stage
+    else {
       var response0 = $('#chatWindow').data('response-0');
       var response1 = $('#chatWindow').data('response-1');
       var chosenOption = $('#chatWindow').data('index');
-
       $('#introTitle').fadeOut();
       $('#explanation').fadeOut();
       $('#optionCards').fadeOut();
@@ -603,7 +710,7 @@ $(document).ready(function(){
       $('#encouragingMessage').append(encouragement[3]);
       $('#encouragingMessage').fadeIn();
       $('#loader').show();
-      // stream some data baby
+      // generate closing options
       fetch('/chat_response_dive',{
         method: 'POST',
         headers:{
@@ -632,12 +739,7 @@ $(document).ready(function(){
 
         round++;
       });
-
-    } else { // probe_num is above 2
-      $('#chatMessages').append("<div class='sophia'><i style='color: Gray;'>Sophia: </i>In this version, I'm not actually a fully functioning chatbot - while the questions I asked you were based on the lesson we are currently planning together, my other responses are canned. sorry!</div>");
     }
-
-    // Always increment probe_num after we're done with the rest of the logic
 
   });
 
